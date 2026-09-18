@@ -7,6 +7,9 @@ button { padding:.55rem .8rem; cursor:pointer; }
 button:hover, button:focus-visible { border-color:var(--accent); outline:none; }
 button.active { background:#146a91; border-color:#76d6ff; }
 .topbar { height:54px; padding:0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); background:#17202a; }
+.top-actions { display:flex; gap:6px; }
+.top-actions button { min-height:38px; padding:.35rem .65rem; }
+button:disabled { opacity:.4; cursor:not-allowed; }
 .version { margin-left:.5rem; color:#91a4b5; font-size:.75rem; }
 main { height:calc(100% - 54px); display:grid; grid-template-columns:300px 1fr; }
 .panel { overflow:auto; padding:12px; background:var(--panel); border-right:1px solid var(--line); }
@@ -30,6 +33,8 @@ input[type="checkbox"] { width:24px; height:24px; min-height:0; accent-color:#1a
 textarea { width:100%; resize:vertical; padding:.55rem; }
 #cell-editor[hidden] { display:none; }
 #apply-cell { width:100%; }
+.camera-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
+.hint { margin:7px 2px 0; color:#92a6b7; font-size:.75rem; line-height:1.4; }
 #workspace { position:relative; min-width:0; min-height:0; touch-action:none; }
 #map-canvas { width:100%; height:100%; display:block; touch-action:none; }
 #hud { position:absolute; left:12px; top:12px; display:flex; flex-wrap:wrap; gap:10px; background:#0a1119d9; padding:8px 10px; border-radius:9px; font-size:.85rem; pointer-events:none; }
@@ -41,6 +46,8 @@ body.menu-collapsed .panel { visibility:hidden; padding:0; border:0; }
   .topbar { height:50px; }
   .topbar strong { font-size:.9rem; }
   .topbar button { min-height:38px; padding:.35rem .55rem; font-size:.78rem; }
+  .top-actions { gap:4px; }
+  .top-actions button { padding:.3rem .45rem; }
   main { height:calc(100% - 50px); grid-template-columns:min(82vw,320px) 1fr; }
   .panel { position:absolute; z-index:5; top:50px; bottom:0; left:0; width:min(82vw,320px); box-shadow:8px 0 24px #0008; }
   body.menu-collapsed .panel { transform:translateX(-105%); visibility:hidden; }

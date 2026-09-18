@@ -10,7 +10,11 @@
 <body>
   <header class="topbar">
     <div><strong>SRPGマップエディタ</strong><span class="version">v0.1</span></div>
-    <button id="menu-toggle" type="button" aria-expanded="true">メニューを折りたたむ</button>
+    <div class="top-actions">
+      <button id="undo" type="button" disabled>戻る</button>
+      <button id="redo" type="button" disabled>進む</button>
+      <button id="menu-toggle" type="button" aria-expanded="true">メニューを折りたたむ</button>
+    </div>
   </header>
   <main>
     <aside id="controls" class="panel">
@@ -64,6 +68,24 @@
           <button id="apply-cell" type="button">セル情報を反映</button>
         </div>
       </section>
+      <section>
+        <h2>カメラ</h2>
+        <div class="camera-grid" role="group" aria-label="カメラプリセット">
+          <button class="camera-preset" data-preset="top" type="button">真上</button>
+          <button class="camera-preset" data-preset="battle45" type="button">戦闘視点1</button>
+          <button class="camera-preset" data-preset="battle135" type="button">戦闘視点2</button>
+          <button class="camera-preset" data-preset="battle225" type="button">戦闘視点3</button>
+          <button class="camera-preset" data-preset="battle315" type="button">戦闘視点4</button>
+          <button class="camera-preset" data-preset="front" type="button">正面</button>
+          <button class="camera-preset" data-preset="right" type="button">右側面</button>
+        </div>
+        <div class="switch-list" aria-label="カメラ軸ロック">
+          <label><span>X軸ロック</span><input id="lock-x" type="checkbox" role="switch"></label>
+          <label><span>Y軸ロック</span><input id="lock-y" type="checkbox" role="switch"></label>
+          <label><span>Z軸ロック</span><input id="lock-z" type="checkbox" role="switch"></label>
+        </div>
+        <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。</p>
+      </section>
     </aside>
     <section id="workspace" aria-label="3Dマップ編集領域">
       <canvas id="map-canvas"></canvas>
@@ -72,6 +94,7 @@
         <span>Height：<b id="hud-height">0.5</b></span>
         <span>色：<i id="hud-color"></i></span>
         <span>連続：<b id="hud-continuous">OFF</b></span>
+        <span>カメラ：<b id="hud-camera">42° / 45°</b></span>
       </div>
       <div id="help">配置：セルをクリックしてHeightを加算します。</div>
     </section>
