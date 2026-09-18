@@ -1,4 +1,4 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+import * as THREE from './vendor/three.module.js';
 import { changeHeight, cloneMap, createMap, getCell, normalizeMap, roundHeight } from './model.js';
 import { EditHistory } from './history.js';
 import { AUTO_SAVE_ID, listMapRecords, loadMapRecord, saveMapRecord } from './storage.js';
@@ -233,5 +233,6 @@ async function start(){
   buildHeightOptions();buildPalette();updateStatus();updateHistoryButtons();
   try{const record=await loadMapRecord(AUTO_SAVE_ID);if(record?.map){map=normalizeMap(record.map);$('map-name').value=map.mapName;$('map-width').value=map.width;$('map-depth').value=map.depth;setSaveStatus('前回の自動保存を復元しました');}else setSaveStatus('自動保存を開始しました');await refreshSavedMaps();}catch(error){console.error(error);setSaveStatus('保存機能を開始できませんでした',true);}
   rebuildScene();resize();addEventListener('resize',resize);animate();
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('./service-worker.js',{scope:'./'}).catch((error)=>console.warn('Service Worker registration failed',error));}
 }
 start();

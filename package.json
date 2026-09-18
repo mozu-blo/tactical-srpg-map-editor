@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
+    "check": "node --test && node site-check.mjs",
     "serve": "node dev-server.mjs"
   }
 }

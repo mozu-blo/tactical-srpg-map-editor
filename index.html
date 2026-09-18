@@ -4,7 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#17202a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SRPGマップ">
   <title>SRPGマップエディタ</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -84,7 +90,7 @@
           <label><span>Y軸ロック</span><input id="lock-y" type="checkbox" role="switch"></label>
           <label><span>Z軸ロック</span><input id="lock-z" type="checkbox" role="switch"></label>
         </div>
-        <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。</p>
+        <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。2本指ドラッグで視点変更、ピンチで拡大縮小します。</p>
       </section>
       <section>
         <h2>保存と出力</h2>
