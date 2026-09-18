@@ -86,6 +86,21 @@
         </div>
         <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。</p>
       </section>
+      <section>
+        <h2>保存と出力</h2>
+        <div class="save-status" id="save-status" aria-live="polite">自動保存を準備中</div>
+        <button id="save-named" type="button">名前を付けて保存</button>
+        <label>保存済みマップ
+          <select id="saved-maps"><option value="">保存済みマップはありません</option></select>
+        </label>
+        <button id="load-named" type="button">選択したマップを開く</button>
+        <div class="export-grid">
+          <button id="export-json" type="button">JSON出力</button>
+          <button id="import-json" type="button">JSON読込</button>
+          <button id="export-top" type="button">真上画像出力</button>
+        </div>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+      </section>
     </aside>
     <section id="workspace" aria-label="3Dマップ編集領域">
       <canvas id="map-canvas"></canvas>

@@ -1,6 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import { changeHeight, cloneMap, createMap, getCell, roundHeight } from './model.js';
+import { changeHeight, cloneMap, createMap, getCell, normalizeMap, roundHeight } from './model.js';
 import { EditHistory } from './history.js';
+import { AUTO_SAVE_ID, listMapRecords, loadMapRecord, saveMapRecord } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const paletteColors = ['#7a8b79','#566573','#8e6e53','#708b45','#587ca3','#9b6a6c','#9b8b61','#725f8e','#4f8079','#9a8062','#5f666d','#b0a58c'];
@@ -21,6 +22,8 @@ let pitch = 42;
 let cameraDistance = 24;
 const cameraTarget = new THREE.Vector3();
 const history = new EditHistory();
+let currentRecordId = null;
+let autoSaveTimer = null;
 
 const renderer = new THREE.WebGLRenderer({ canvas:$('map-canvas'), antialias:true, preserveDrawingBuffer:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -134,12 +137,32 @@ function updateHistoryButtons() {
   $('undo').disabled=!history.canUndo; $('redo').disabled=!history.canRedo;
 }
 
+function setSaveStatus(message,failed=false) {
+  $('save-status').textContent=message; $('save-status').classList.toggle('error',failed);
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer); setSaveStatus('変更を保存中…');
+  autoSaveTimer=setTimeout(async()=>{
+    try { await saveMapRecord(AUTO_SAVE_ID,map); setSaveStatus(`自動保存済み ${new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`); }
+    catch(error) { console.error(error); setSaveStatus('自動保存に失敗しました',true); }
+  },350);
+}
+
+async function refreshSavedMaps(selectedId=currentRecordId) {
+  const records=await listMapRecords(); $('saved-maps').replaceChildren();
+  if(!records.length){const option=new Option('保存済みマップはありません','');$('saved-maps').add(option);$('load-named').disabled=true;return;}
+  $('load-named').disabled=false;
+  for(const record of records){const date=new Date(record.updatedAt).toLocaleString('ja-JP');const option=new Option(`${record.mapName}（${date}）`,record.id);$('saved-maps').add(option);}
+  if(selectedId&&records.some((record)=>record.id===selectedId))$('saved-maps').value=selectedId;
+}
+
 function commitGesture(before) {
-  if(before&&history.commit(before,map)) updateHistoryButtons();
+  if(before&&history.commit(before,map)){updateHistoryButtons();scheduleAutoSave();}
 }
 
 function restoreMap(next) {
-  if(!next)return; map=next; selected=null; rebuildScene(); updateHistoryButtons();
+  if(!next)return; map=next; selected=null; $('map-name').value=map.mapName; rebuildScene(); updateHistoryButtons(); scheduleAutoSave();
 }
 
 function updateSelection() {
@@ -172,7 +195,7 @@ function finishPointer(event){if(!activePointers.has(event.pointerId))return;con
 renderer.domElement.addEventListener('pointerup',finishPointer);renderer.domElement.addEventListener('pointercancel',finishPointer);
 renderer.domElement.addEventListener('wheel',(event)=>{event.preventDefault();if($('lock-z').checked)return;camera.zoom=Math.max(.3,Math.min(6,camera.zoom*(event.deltaY>0?.9:1.1)));camera.updateProjectionMatrix();},{passive:false});
 
-$('create-map').addEventListener('click',()=>{map=createMap($('map-name').value,$('map-width').value,$('map-depth').value);selected=null;history.reset();updateHistoryButtons();rebuildScene();});
+$('create-map').addEventListener('click',()=>{map=createMap($('map-name').value,$('map-width').value,$('map-depth').value);selected=null;currentRecordId=null;history.reset();updateHistoryButtons();rebuildScene();scheduleAutoSave();});
 document.querySelectorAll('.mode').forEach((button)=>button.addEventListener('click',()=>{mode=button.dataset.mode;document.querySelectorAll('.mode').forEach((item)=>item.classList.toggle('active',item===button));updateStatus();}));
 document.querySelectorAll('.terrain-action').forEach((button)=>button.addEventListener('click',()=>{terrainAction=button.dataset.action;document.querySelectorAll('.terrain-action').forEach((item)=>item.classList.toggle('active',item===button));updateStatus();}));
 $('height-amount').addEventListener('change',updateStatus);$('current-color').addEventListener('input',()=>{updateStatus();buildPaletteState();});$('continuous-edit').addEventListener('change',updateStatus);
@@ -181,7 +204,34 @@ $('undo').addEventListener('click',()=>restoreMap(history.undo(map)));
 $('redo').addEventListener('click',()=>restoreMap(history.redo(map)));
 const presets={top:{pitch:90,yaw:45},battle45:{pitch:42,yaw:45},battle135:{pitch:42,yaw:135},battle225:{pitch:42,yaw:225},battle315:{pitch:42,yaw:315},front:{pitch:0,yaw:0},right:{pitch:0,yaw:90}};
 document.querySelectorAll('.camera-preset').forEach((button)=>button.addEventListener('click',()=>{const preset=presets[button.dataset.preset];pitch=preset.pitch;yaw=preset.yaw;camera.zoom=1;updateCamera();}));
+$('save-named').addEventListener('click',async()=>{
+  map.mapName=$('map-name').value.trim()||'名称未設定マップ';
+  currentRecordId=currentRecordId||`map-${crypto.randomUUID()}`;
+  try{await saveMapRecord(currentRecordId,map);await refreshSavedMaps(currentRecordId);setSaveStatus(`「${map.mapName}」を保存しました`);scheduleAutoSave();}catch(error){console.error(error);setSaveStatus('名前付き保存に失敗しました',true);}
+});
+$('load-named').addEventListener('click',async()=>{
+  const id=$('saved-maps').value;if(!id)return;
+  try{const record=await loadMapRecord(id);if(!record)return;map=normalizeMap(record.map);currentRecordId=id;selected=null;history.reset();$('map-name').value=map.mapName;$('map-width').value=map.width;$('map-depth').value=map.depth;rebuildScene();updateHistoryButtons();setSaveStatus(`「${map.mapName}」を開きました`);scheduleAutoSave();}catch(error){console.error(error);setSaveStatus('マップを開けませんでした',true);}
+});
+function safeFileName(name){return String(name||'srpg-map').replace(/[\\/:*?"<>|]/g,'_').slice(0,80);}
+function downloadBlob(blob,fileName){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=fileName;link.hidden=true;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$('export-json').addEventListener('click',()=>{map.mapName=$('map-name').value.trim()||map.mapName;downloadBlob(new Blob([JSON.stringify(map,null,2)],{type:'application/json'}),`${safeFileName(map.mapName)}.json`);setSaveStatus('JSONを出力しました');});
+$('import-json').addEventListener('click',()=>$('import-file').click());
+$('import-file').addEventListener('change',async()=>{
+  const file=$('import-file').files?.[0];if(!file)return;
+  try{map=normalizeMap(JSON.parse(await file.text()));currentRecordId=null;selected=null;history.reset();$('map-name').value=map.mapName;$('map-width').value=map.width;$('map-depth').value=map.depth;rebuildScene();updateHistoryButtons();scheduleAutoSave();setSaveStatus(`「${map.mapName}」を読み込みました`);}catch(error){console.error(error);setSaveStatus(`JSONを読み込めません: ${error.message}`,true);}finally{$('import-file').value='';}
+});
+$('export-top').addEventListener('click',()=>{
+  const saved={yaw,pitch,zoom:camera.zoom,left:camera.left,right:camera.right,top:camera.top,bottom:camera.bottom,width:renderer.domElement.width,height:renderer.domElement.height};
+  const size=Math.max(map.width,map.depth)*.56;yaw=45;pitch=90;camera.left=-size;camera.right=size;camera.top=size;camera.bottom=-size;camera.zoom=1;renderer.setSize(1600,1600,false);updateCamera();renderer.render(scene,camera);
+  renderer.domElement.toBlob((blob)=>{if(blob){downloadBlob(blob,`${safeFileName(map.mapName)}_Top.png`);setSaveStatus('真上確認画像を出力しました');}const box=$('workspace').getBoundingClientRect();renderer.setSize(box.width,box.height,false);yaw=saved.yaw;pitch=saved.pitch;camera.left=saved.left;camera.right=saved.right;camera.top=saved.top;camera.bottom=saved.bottom;camera.zoom=saved.zoom;updateCamera();},'image/png');
+});
 $('menu-toggle').addEventListener('click',()=>{document.body.classList.toggle('menu-collapsed');const collapsed=document.body.classList.contains('menu-collapsed');$('menu-toggle').textContent=collapsed?'メニューを開く':'メニューを折りたたむ';$('menu-toggle').setAttribute('aria-expanded',String(!collapsed));setTimeout(resize,0);});
 function resize(){const box=$('workspace').getBoundingClientRect();renderer.setSize(box.width,box.height,false);frameCamera();}
 function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}
-buildHeightOptions();buildPalette();updateStatus();updateHistoryButtons();rebuildScene();resize();addEventListener('resize',resize);animate();
+async function start(){
+  buildHeightOptions();buildPalette();updateStatus();updateHistoryButtons();
+  try{const record=await loadMapRecord(AUTO_SAVE_ID);if(record?.map){map=normalizeMap(record.map);$('map-name').value=map.mapName;$('map-width').value=map.width;$('map-depth').value=map.depth;setSaveStatus('前回の自動保存を復元しました');}else setSaveStatus('自動保存を開始しました');await refreshSavedMaps();}catch(error){console.error(error);setSaveStatus('保存機能を開始できませんでした',true);}
+  rebuildScene();resize();addEventListener('resize',resize);animate();
+}
+start();

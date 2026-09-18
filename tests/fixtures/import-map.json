@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "mapName": "Import QA",
+  "width": 2,
+  "depth": 2,
+  "cells": [
+    { "x": 0, "z": 0, "height": 0, "color": "#7a8b79", "impassable": false, "memo": "" },
+    { "x": 1, "z": 0, "height": 0.5, "color": "#8e6e53", "impassable": false, "memo": "" },
+    { "x": 0, "z": 1, "height": 1, "color": "#708b45", "impassable": true, "memo": "門" },
+    { "x": 1, "z": 1, "height": 1.5, "color": "#566573", "impassable": false, "memo": "" }
+  ]
+}

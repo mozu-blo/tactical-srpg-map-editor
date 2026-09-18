@@ -27,3 +27,12 @@ test('JSON入力を正規化し不正セル数を拒否する', () => {
   assert.equal(map.cells[0].memo, '岩');
   assert.throws(() => normalizeMap({ width:2, depth:2, cells:[] }), /セル数/);
 });
+
+test('JSON入力の侵入禁止とメモを保持する', () => {
+  const source = createMap('属性', 1, 1);
+  source.cells[0].impassable = true;
+  source.cells[0].memo = '救助対象';
+  const restored = normalizeMap(JSON.parse(JSON.stringify(source)));
+  assert.equal(restored.cells[0].impassable, true);
+  assert.equal(restored.cells[0].memo, '救助対象');
+});
