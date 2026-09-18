@@ -1,7 +1,7 @@
 import { access, readFile } from 'node:fs/promises';
 
 const required = [
-  'index.html','styles.css','app.js','model.js','history.js','storage.js','service-worker.js','manifest.webmanifest',
+  'index.html','styles.css','app.js','model.js','continuous-height.js','history.js','storage.js','service-worker.js','manifest.webmanifest',
   'vendor/three.module.js','vendor/three.core.js','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','README.md','JSON_SCHEMA.md','QA_REPORT.md'
 ];
 await Promise.all(required.map((file) => access(file)));

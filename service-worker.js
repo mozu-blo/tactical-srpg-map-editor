@@ -1,6 +1,6 @@
-const CACHE_NAME = 'srpg-map-editor-v0.1.0';
+const CACHE_NAME = 'srpg-map-editor-v0.1.1';
 const APP_FILES = [
-  './', './index.html', './styles.css', './app.js', './model.js', './history.js', './storage.js',
+  './', './index.html', './styles.css', './app.js', './model.js', './continuous-height.js', './history.js', './storage.js',
   './manifest.webmanifest', './vendor/three.module.js', './vendor/three.core.js', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

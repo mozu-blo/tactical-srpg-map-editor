@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { changeHeight, cloneMap, createMap, getCell, normalizeMap, roundHeight } from './model.js';
+import { applyFixedContinuousHeight, getContinuousTargetHeight } from './continuous-height.js';
 import { EditHistory } from './history.js';
 import { AUTO_SAVE_ID, listMapRecords, loadMapRecord, saveMapRecord } from './storage.js';
 
@@ -129,7 +130,13 @@ function isAllowedSwipeCell(mesh) {
 function editCell(mesh,continuous=false) {
   if(!mesh||(continuous&&!isAllowedSwipeCell(mesh)))return; const key=`${mesh.userData.x},${mesh.userData.z}`; if(editedDuringGesture.has(key))return; editedDuringGesture.add(key);
   const cell=getCell(map,mesh.userData.x,mesh.userData.z); selected=cell;
-  if(mode==='terrain'){if($('change-height').checked)changeHeight(cell,(terrainAction==='add'?1:-1)*Number($('height-amount').value));if(terrainAction==='add')cell.color=$('current-color').value;updateCellMesh(cell);}
+  if(mode==='terrain'){
+    if($('change-height').checked){
+      if(continuous&&!$('edit-y').checked&&gesture?.targetHeight!==null) applyFixedContinuousHeight(cell,gesture.targetHeight,terrainAction);
+      else changeHeight(cell,(terrainAction==='add'?1:-1)*Number($('height-amount').value));
+    }
+    if(terrainAction==='add')cell.color=$('current-color').value;updateCellMesh(cell);
+  }
   else if(mode==='impassable'){cell.impassable=!cell.impassable;updateCellMesh(cell);} updateSelection(); if(mode==='memo')setTimeout(()=>$('selected-memo').focus(),0);
 }
 
@@ -182,7 +189,13 @@ const center=(values)=>{const list=[...values];return{x:list.reduce((s,p)=>s+p.x
 renderer.domElement.addEventListener('contextmenu',(event)=>event.preventDefault());
 renderer.domElement.addEventListener('pointerdown',(event)=>{
   event.preventDefault();renderer.domElement.setPointerCapture(event.pointerId);activePointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
-  if(activePointers.size===1){editedDuringGesture.clear();const startCell=pickCell(event);gesture={start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},startCell,moved:false,camera:event.button===2,before:cloneMap(map)};}
+  if(activePointers.size===1){
+    editedDuringGesture.clear();const startCell=pickCell(event);
+    const startHeight=startCell?getCell(map,startCell.userData.x,startCell.userData.z).height:0;
+    const targetHeight=mode==='terrain'&&$('change-height').checked&&!$('edit-y').checked&&startCell
+      ?getContinuousTargetHeight(startHeight,Number($('height-amount').value),terrainAction):null;
+    gesture={start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},startCell,targetHeight,moved:false,camera:event.button===2,before:cloneMap(map)};
+  }
   else if(activePointers.size===2){const list=[...activePointers.values()];gesture={camera:true,moved:true,lastCenter:center(list),lastDistance:distance(list[0],list[1])};editedDuringGesture.clear();}
 });
 renderer.domElement.addEventListener('pointermove',(event)=>{
