@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#17202a">
+  <title>SRPGマップエディタ</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><strong>SRPGマップエディタ</strong><span class="version">v0.1</span></div>
+    <button id="menu-toggle" type="button" aria-expanded="true">メニューを折りたたむ</button>
+  </header>
+  <main>
+    <aside id="controls" class="panel">
+      <section>
+        <h2>新規マップ</h2>
+        <label>マップ名<input id="map-name" value="新しいマップ"></label>
+        <div class="row">
+          <label>横サイズ<input id="map-width" type="number" min="1" max="64" value="16"></label>
+          <label>縦サイズ<input id="map-depth" type="number" min="1" max="64" value="16"></label>
+        </div>
+        <button id="create-map" type="button">新規作成</button>
+      </section>
+      <section>
+        <h2>地形</h2>
+        <div class="segmented" role="group" aria-label="編集方法">
+          <button class="mode active" data-mode="add" type="button">配置</button>
+          <button class="mode" data-mode="remove" type="button">消去</button>
+          <button class="mode" data-mode="select" type="button">選択</button>
+        </div>
+        <label>配置Height
+          <select id="height-amount"></select>
+        </label>
+        <label>現在色<input id="current-color" type="color" value="#7a8b79"></label>
+        <div id="palette" class="palette" aria-label="カラーパレット"></div>
+      </section>
+      <section>
+        <h2>選択セル</h2>
+        <dl class="cell-info">
+          <div><dt>X座標</dt><dd id="cell-x">—</dd></div>
+          <div><dt>Z座標</dt><dd id="cell-z">—</dd></div>
+          <div><dt>Height</dt><dd id="cell-height">—</dd></div>
+          <div><dt>色</dt><dd id="cell-color">—</dd></div>
+        </dl>
+      </section>
+    </aside>
+    <section id="workspace" aria-label="3Dマップ編集領域">
+      <canvas id="map-canvas"></canvas>
+      <div id="hud" aria-live="polite">
+        <span>モード：<b id="hud-mode">配置</b></span>
+        <span>Height：<b id="hud-height">0.5</b></span>
+        <span>色：<i id="hud-color"></i></span>
+      </div>
+      <div id="help">配置：セルをクリックしてHeightを加算します。</div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
