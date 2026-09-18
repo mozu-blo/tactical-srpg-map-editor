@@ -25,16 +25,27 @@
       </section>
       <section>
         <h2>地形</h2>
-        <div class="segmented" role="group" aria-label="編集方法">
-          <button class="mode active" data-mode="add" type="button">配置</button>
-          <button class="mode" data-mode="remove" type="button">消去</button>
+        <div class="mode-grid" role="group" aria-label="主モード">
+          <button class="mode active" data-mode="terrain" type="button">地形</button>
+          <button class="mode" data-mode="impassable" type="button">侵入禁止</button>
+          <button class="mode" data-mode="memo" type="button">メモ</button>
           <button class="mode" data-mode="select" type="button">選択</button>
+        </div>
+        <div class="segmented" role="group" aria-label="地形の編集方法">
+          <button class="terrain-action active" data-action="add" type="button">配置</button>
+          <button class="terrain-action" data-action="remove" type="button">消去</button>
         </div>
         <label>配置Height
           <select id="height-amount"></select>
         </label>
         <label>現在色<input id="current-color" type="color" value="#7a8b79"></label>
         <div id="palette" class="palette" aria-label="カラーパレット"></div>
+        <div class="switch-list" aria-label="編集設定">
+          <label><span>スワイプ連続編集</span><input id="continuous-edit" type="checkbox" role="switch"></label>
+          <label><span>X方向連続編集</span><input id="edit-x" type="checkbox" role="switch" checked></label>
+          <label><span>Z方向連続編集</span><input id="edit-z" type="checkbox" role="switch" checked></label>
+          <label><span>Height変更</span><input id="change-height" type="checkbox" role="switch" checked></label>
+        </div>
       </section>
       <section>
         <h2>選択セル</h2>
@@ -43,15 +54,24 @@
           <div><dt>Z座標</dt><dd id="cell-z">—</dd></div>
           <div><dt>Height</dt><dd id="cell-height">—</dd></div>
           <div><dt>色</dt><dd id="cell-color">—</dd></div>
+          <div><dt>侵入禁止</dt><dd id="cell-impassable">—</dd></div>
         </dl>
+        <div id="cell-editor" hidden>
+          <label>Height<input id="selected-height" type="number" min="0" step="0.5"></label>
+          <label>色<input id="selected-color" type="color"></label>
+          <label class="check-row"><span>侵入禁止</span><input id="selected-impassable" type="checkbox"></label>
+          <label>オブジェクトメモ<textarea id="selected-memo" rows="3" maxlength="500" placeholder="例：救助対象、門、弓兵配置候補"></textarea></label>
+          <button id="apply-cell" type="button">セル情報を反映</button>
+        </div>
       </section>
     </aside>
     <section id="workspace" aria-label="3Dマップ編集領域">
       <canvas id="map-canvas"></canvas>
       <div id="hud" aria-live="polite">
-        <span>モード：<b id="hud-mode">配置</b></span>
+        <span>モード：<b id="hud-mode">地形・配置</b></span>
         <span>Height：<b id="hud-height">0.5</b></span>
         <span>色：<i id="hud-color"></i></span>
+        <span>連続：<b id="hud-continuous">OFF</b></span>
       </div>
       <div id="help">配置：セルをクリックしてHeightを加算します。</div>
     </section>
