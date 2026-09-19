@@ -3,6 +3,7 @@ import { changeHeight, cloneMap, createMap, getCell, normalizeMap, roundHeight }
 import { applyFixedContinuousHeight, getContinuousTargetHeight } from './continuous-height.js';
 import { EditHistory } from './history.js';
 import { AUTO_SAVE_ID, listMapRecords, loadMapRecord, saveMapRecord } from './storage.js';
+import { heightLabelText, panTargetDelta } from './view-utils.js';
 
 const $ = (id) => document.getElementById(id);
 const paletteColors = ['#7a8b79','#566573','#8e6e53','#708b45','#587ca3','#9b6a6c','#9b8b61','#725f8e','#4f8079','#9a8062','#5f666d','#b0a58c'];
@@ -39,12 +40,16 @@ const raycaster = new THREE.Raycaster();
 const pointerNdc = new THREE.Vector2();
 const cellGroup = new THREE.Group();
 const gridGroup = new THREE.Group();
-scene.add(cellGroup, gridGroup);
+const labelGroup = new THREE.Group();
+scene.add(cellGroup, gridGroup, labelGroup);
 const selectionMesh = new THREE.Mesh(new THREE.BoxGeometry(1.04,1,1.04),new THREE.MeshBasicMaterial({ color:0xffff66, wireframe:true, depthTest:false }));
 selectionMesh.visible=false;
 selectionMesh.renderOrder=20;
 scene.add(selectionMesh);
 const cellMeshes=[];
+const heightLabels=[];
+const heightLabelMaterials=new Map();
+const labelGeometry=new THREE.PlaneGeometry(.74,.74);
 const activePointers=new Map();
 const editedDuringGesture=new Set();
 let gesture=null;
@@ -74,6 +79,26 @@ function clearGroup(group) {
   }
 }
 
+function labelMaterial(height) {
+  const text=heightLabelText(height);
+  if(heightLabelMaterials.has(text))return heightLabelMaterials.get(text);
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+  const context=canvas.getContext('2d');context.textAlign='center';context.textBaseline='middle';
+  context.font='bold 132px sans-serif';context.lineJoin='round';
+  context.strokeStyle='#17202a';context.lineWidth=15;
+  context.strokeText(text,128,132);context.fillStyle='#ffffff';context.fillText(text,128,132);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:true,depthWrite:false,side:THREE.DoubleSide});
+  heightLabelMaterials.set(text,material);return material;
+}
+
+function updateHeightLabel(cell) {
+  const label=heightLabels[cell.z*map.width+cell.x];
+  label.material=labelMaterial(cell.height);
+  label.position.y=Math.max(cell.height,.06)+.018;
+  label.visible=$('show-height').checked;
+}
+
 function updateMeshParts(root,cell) {
   const height=Math.max(cell.height,.06);
   const block=root.getObjectByName('block'); block.scale.y=height; block.position.y=height/2; block.material.color.set(cell.color);
@@ -97,8 +122,17 @@ function addGrid(width,depth) {
 
 function rebuildScene() {
   clearGroup(cellGroup); clearGroup(gridGroup); cellMeshes.length=0;
+  labelGroup.clear();heightLabels.length=0;
+  for(const material of heightLabelMaterials.values()){material.map.dispose();material.dispose();}
+  heightLabelMaterials.clear();
   const centerX=(map.width-1)/2,centerZ=(map.depth-1)/2;
-  for(const cell of map.cells){const root=makeCellMesh(cell,centerX,centerZ);cellGroup.add(root);cellMeshes.push(root);} addGrid(map.width,map.depth); frameCamera(); updateSelection();
+  for(const cell of map.cells){
+    const root=makeCellMesh(cell,centerX,centerZ);cellGroup.add(root);cellMeshes.push(root);
+    const label=new THREE.Mesh(labelGeometry,labelMaterial(cell.height));label.rotation.x=-Math.PI/2;
+    label.position.set(cell.x-centerX,0,cell.z-centerZ);labelGroup.add(label);heightLabels.push(label);
+    updateHeightLabel(cell);
+  }
+  addGrid(map.width,map.depth); frameCamera(); updateSelection();
 }
 
 function updateCamera() {
@@ -109,12 +143,20 @@ function updateCamera() {
 }
 
 function frameCamera() {
-  const size=Math.max(map.width,map.depth)*.72,aspect=renderer.domElement.clientWidth/Math.max(renderer.domElement.clientHeight,1);
+  const aspect=renderer.domElement.clientWidth/Math.max(renderer.domElement.clientHeight,1);
+  const projectedWidth=(map.width+map.depth)*Math.SQRT1_2;
+  const size=Math.max(Math.max(map.width,map.depth)*.72,projectedWidth*.54/aspect);
   camera.left=-size*aspect; camera.right=size*aspect; camera.top=size; camera.bottom=-size; camera.zoom=1; cameraDistance=Math.max(map.width,map.depth)*1.65;
   cameraTarget.set(0,Math.max(...map.cells.map((cell)=>cell.height),0)*.22,0); updateCamera();
 }
 
-function updateCellMesh(cell){updateMeshParts(cellMeshes[cell.z*map.width+cell.x],cell);updateSelection();}
+function panCamera(dx,dy) {
+  const delta=panTargetDelta({dx,dy,yaw,pitch,top:camera.top,bottom:camera.bottom,zoom:camera.zoom,viewportHeight:renderer.domElement.clientHeight});
+  cameraTarget.x+=delta.x;cameraTarget.z+=delta.z;
+  updateCamera();
+}
+
+function updateCellMesh(cell){updateMeshParts(cellMeshes[cell.z*map.width+cell.x],cell);updateHeightLabel(cell);updateSelection();}
 
 function pickCell(point) {
   const rect=renderer.domElement.getBoundingClientRect(); pointerNdc.x=((point.clientX-rect.left)/rect.width)*2-1; pointerNdc.y=-((point.clientY-rect.top)/rect.height)*2+1;
@@ -194,17 +236,17 @@ renderer.domElement.addEventListener('pointerdown',(event)=>{
     const startHeight=startCell?getCell(map,startCell.userData.x,startCell.userData.z).height:0;
     const targetHeight=mode==='terrain'&&$('change-height').checked&&!$('edit-y').checked&&startCell
       ?getContinuousTargetHeight(startHeight,Number($('height-amount').value),terrainAction):null;
-    gesture={start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},startCell,targetHeight,moved:false,camera:event.button===2,before:cloneMap(map)};
+    gesture={start:{x:event.clientX,y:event.clientY},last:{x:event.clientX,y:event.clientY},startCell,targetHeight,moved:false,camera:event.button===2||event.button===1,pan:event.button===1||(event.button===2&&event.shiftKey),before:cloneMap(map)};
   }
   else if(activePointers.size===2){const list=[...activePointers.values()];gesture={camera:true,moved:true,lastCenter:center(list),lastDistance:distance(list[0],list[1])};editedDuringGesture.clear();}
 });
 renderer.domElement.addEventListener('pointermove',(event)=>{
   if(!activePointers.has(event.pointerId))return;activePointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
-  if(activePointers.size>=2){const list=[...activePointers.values()].slice(0,2),mid=center(list),gap=distance(list[0],list[1]);if(gesture?.lastCenter){if(!$('lock-y').checked)yaw-=(mid.x-gesture.lastCenter.x)*.28;if(!$('lock-x').checked)pitch=Math.max(0,Math.min(90,pitch+(mid.y-gesture.lastCenter.y)*.22));}if(gesture?.lastDistance&&!$('lock-z').checked)camera.zoom=Math.max(.3,Math.min(6,camera.zoom*(gap/gesture.lastDistance)));gesture={...gesture,camera:true,moved:true,lastCenter:mid,lastDistance:gap};updateCamera();return;}
+  if(activePointers.size>=2){const list=[...activePointers.values()].slice(0,2),mid=center(list),gap=distance(list[0],list[1]);if(gesture?.lastCenter){if($('two-finger-mode').value==='pan')panCamera(mid.x-gesture.lastCenter.x,mid.y-gesture.lastCenter.y);else{if(!$('lock-y').checked)yaw-=(mid.x-gesture.lastCenter.x)*.28;if(!$('lock-x').checked)pitch=Math.max(0,Math.min(90,pitch+(mid.y-gesture.lastCenter.y)*.22));}}if(gesture?.lastDistance&&!$('lock-z').checked)camera.zoom=Math.max(.3,Math.min(6,camera.zoom*(gap/gesture.lastDistance)));gesture={...gesture,camera:true,moved:true,lastCenter:mid,lastDistance:gap};updateCamera();return;}
   if(!gesture)return;const dx=event.clientX-gesture.last.x,dy=event.clientY-gesture.last.y,total=Math.hypot(event.clientX-gesture.start.x,event.clientY-gesture.start.y);if(total>6)gesture.moved=true;
-  if(gesture.camera){if(!$('lock-y').checked)yaw-=dx*.3;if(!$('lock-x').checked)pitch=Math.max(0,Math.min(90,pitch+dy*.24));updateCamera();}else if(gesture.moved&&$('continuous-edit').checked){if(!editedDuringGesture.size)editCell(gesture.startCell,true);editCell(pickCell(event),true);}gesture.last={x:event.clientX,y:event.clientY};
+  if(gesture.camera){if(gesture.pan)panCamera(dx,dy);else{if(!$('lock-y').checked)yaw-=dx*.3;if(!$('lock-x').checked)pitch=Math.max(0,Math.min(90,pitch+dy*.24));updateCamera();}}else if(gesture.moved&&$('continuous-edit').checked){if(!editedDuringGesture.size)editCell(gesture.startCell,true);editCell(pickCell(event),true);}gesture.last={x:event.clientX,y:event.clientY};
 });
-function finishPointer(event){if(!activePointers.has(event.pointerId))return;const wasCamera=activePointers.size>1||gesture?.camera,before=gesture?.before;if(!gesture?.moved&&!wasCamera&&event.button!==2)editCell(pickCell(event));activePointers.delete(event.pointerId);if(!activePointers.size){if(!wasCamera)commitGesture(before);gesture=null;editedDuringGesture.clear();}else if(activePointers.size===1){const last=[...activePointers.values()][0];gesture={camera:true,moved:true,start:last,last};}}
+function finishPointer(event){if(!activePointers.has(event.pointerId))return;const wasCamera=activePointers.size>1||gesture?.camera,before=gesture?.before;if(!gesture?.moved&&!wasCamera&&event.button!==2)editCell(pickCell(event));activePointers.delete(event.pointerId);if(!activePointers.size){if(!wasCamera)commitGesture(before);gesture=null;editedDuringGesture.clear();}else if(activePointers.size===1){const last=[...activePointers.values()][0];gesture={camera:true,pan:$('two-finger-mode').value==='pan',moved:true,start:last,last};}}
 renderer.domElement.addEventListener('pointerup',finishPointer);renderer.domElement.addEventListener('pointercancel',finishPointer);
 renderer.domElement.addEventListener('wheel',(event)=>{event.preventDefault();if($('lock-z').checked)return;camera.zoom=Math.max(.3,Math.min(6,camera.zoom*(event.deltaY>0?.9:1.1)));camera.updateProjectionMatrix();},{passive:false});
 
@@ -212,11 +254,13 @@ $('create-map').addEventListener('click',()=>{map=createMap($('map-name').value,
 document.querySelectorAll('.mode').forEach((button)=>button.addEventListener('click',()=>{mode=button.dataset.mode;document.querySelectorAll('.mode').forEach((item)=>item.classList.toggle('active',item===button));updateStatus();}));
 document.querySelectorAll('.terrain-action').forEach((button)=>button.addEventListener('click',()=>{terrainAction=button.dataset.action;document.querySelectorAll('.terrain-action').forEach((item)=>item.classList.toggle('active',item===button));updateStatus();}));
 $('height-amount').addEventListener('change',updateStatus);$('current-color').addEventListener('input',()=>{updateStatus();buildPaletteState();});$('continuous-edit').addEventListener('change',updateStatus);
+$('show-height').addEventListener('change',()=>{labelGroup.visible=$('show-height').checked;});
 $('apply-cell').addEventListener('click',()=>{if(!selected)return;const before=cloneMap(map);selected.height=roundHeight($('selected-height').value);selected.color=$('selected-color').value;selected.impassable=$('selected-impassable').checked;selected.memo=$('selected-memo').value.slice(0,500);updateCellMesh(selected);updateSelection();commitGesture(before);});
 $('undo').addEventListener('click',()=>restoreMap(history.undo(map)));
 $('redo').addEventListener('click',()=>restoreMap(history.redo(map)));
 const presets={top:{pitch:90,yaw:45},battle45:{pitch:42,yaw:45},battle135:{pitch:42,yaw:135},battle225:{pitch:42,yaw:225},battle315:{pitch:42,yaw:315},front:{pitch:0,yaw:0},right:{pitch:0,yaw:90}};
 document.querySelectorAll('.camera-preset').forEach((button)=>button.addEventListener('click',()=>{const preset=presets[button.dataset.preset];pitch=preset.pitch;yaw=preset.yaw;camera.zoom=1;updateCamera();}));
+$('reset-center').addEventListener('click',()=>{cameraTarget.x=0;cameraTarget.z=0;updateCamera();});
 $('save-named').addEventListener('click',async()=>{
   map.mapName=$('map-name').value.trim()||'名称未設定マップ';
   currentRecordId=currentRecordId||`map-${crypto.randomUUID()}`;
@@ -240,7 +284,7 @@ $('export-top').addEventListener('click',()=>{
   renderer.domElement.toBlob((blob)=>{if(blob){downloadBlob(blob,`${safeFileName(map.mapName)}_Top.png`);setSaveStatus('真上確認画像を出力しました');}const box=$('workspace').getBoundingClientRect();renderer.setSize(box.width,box.height,false);yaw=saved.yaw;pitch=saved.pitch;camera.left=saved.left;camera.right=saved.right;camera.top=saved.top;camera.bottom=saved.bottom;camera.zoom=saved.zoom;updateCamera();},'image/png');
 });
 $('menu-toggle').addEventListener('click',()=>{document.body.classList.toggle('menu-collapsed');const collapsed=document.body.classList.contains('menu-collapsed');$('menu-toggle').textContent=collapsed?'メニューを開く':'メニューを折りたたむ';$('menu-toggle').setAttribute('aria-expanded',String(!collapsed));setTimeout(resize,0);});
-function resize(){const box=$('workspace').getBoundingClientRect();renderer.setSize(box.width,box.height,false);frameCamera();}
+function resize(){const box=$('workspace').getBoundingClientRect();renderer.setSize(box.width,box.height,false);const size=camera.top,aspect=box.width/Math.max(box.height,1);camera.left=-size*aspect;camera.right=size*aspect;camera.updateProjectionMatrix();}
 function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}
 async function start(){
   buildHeightOptions();buildPalette();updateStatus();updateHistoryButtons();

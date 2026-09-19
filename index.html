@@ -56,6 +56,7 @@
           <label><span>Y方向連続編集</span><input id="edit-y" type="checkbox" role="switch"></label>
           <label><span>Z方向連続編集</span><input id="edit-z" type="checkbox" role="switch" checked></label>
           <label><span>Height変更</span><input id="change-height" type="checkbox" role="switch" checked></label>
+          <label><span>Height表示</span><input id="show-height" type="checkbox" role="switch" checked></label>
         </div>
       </section>
       <section>
@@ -86,12 +87,19 @@
           <button class="camera-preset" data-preset="front" type="button">正面</button>
           <button class="camera-preset" data-preset="right" type="button">右側面</button>
         </div>
+        <label>2本指ドラッグ
+          <select id="two-finger-mode">
+            <option value="rotate">回転</option>
+            <option value="pan">水平移動</option>
+          </select>
+        </label>
+        <button id="reset-center" type="button">中央に戻す</button>
         <div class="switch-list" aria-label="カメラ軸ロック">
           <label><span>X軸ロック</span><input id="lock-x" type="checkbox" role="switch"></label>
           <label><span>Y軸ロック</span><input id="lock-y" type="checkbox" role="switch"></label>
           <label><span>Z軸ロック</span><input id="lock-z" type="checkbox" role="switch"></label>
         </div>
-        <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。2本指ドラッグで視点変更、ピンチで拡大縮小します。</p>
+        <p class="hint">X：Pitch、Y：Yaw、Z：Zoomを固定します。PCでは中ドラッグまたはShift＋右ドラッグで水平移動します。2本指ドラッグは上の設定に従い、ピンチで拡大縮小します。</p>
       </section>
       <section>
         <h2>保存と出力</h2>
