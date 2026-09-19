@@ -3,7 +3,7 @@ import { changeHeight, cloneMap, createMap, getCell, normalizeMap, roundHeight }
 import { applyFixedContinuousHeight, getContinuousTargetHeight } from './continuous-height.js';
 import { EditHistory } from './history.js';
 import { AUTO_SAVE_ID, listMapRecords, loadMapRecord, saveMapRecord } from './storage.js';
-import { heightLabelText, panTargetDelta } from './view-utils.js';
+import { heightLabelText, panTargetDelta, renderHeight } from './view-utils.js';
 
 const $ = (id) => document.getElementById(id);
 const paletteColors = ['#7a8b79','#566573','#8e6e53','#708b45','#587ca3','#9b6a6c','#9b8b61','#725f8e','#4f8079','#9a8062','#5f666d','#b0a58c'];
@@ -95,12 +95,12 @@ function labelMaterial(height) {
 function updateHeightLabel(cell) {
   const label=heightLabels[cell.z*map.width+cell.x];
   label.material=labelMaterial(cell.height);
-  label.position.y=Math.max(cell.height,.06)+.018;
+  label.position.y=renderHeight(cell.height)+.018;
   label.visible=$('show-height').checked;
 }
 
 function updateMeshParts(root,cell) {
-  const height=Math.max(cell.height,.06);
+  const height=renderHeight(cell.height);
   const block=root.getObjectByName('block'); block.scale.y=height; block.position.y=height/2; block.material.color.set(cell.color);
   const blocked=root.getObjectByName('blocked'); blocked.scale.y=height+.06; blocked.position.y=height/2+.03; blocked.visible=cell.impassable;
 }
@@ -147,7 +147,7 @@ function frameCamera() {
   const projectedWidth=(map.width+map.depth)*Math.SQRT1_2;
   const size=Math.max(Math.max(map.width,map.depth)*.72,projectedWidth*.54/aspect);
   camera.left=-size*aspect; camera.right=size*aspect; camera.top=size; camera.bottom=-size; camera.zoom=1; cameraDistance=Math.max(map.width,map.depth)*1.65;
-  cameraTarget.set(0,Math.max(...map.cells.map((cell)=>cell.height),0)*.22,0); updateCamera();
+  cameraTarget.set(0,Math.max(...map.cells.map((cell)=>renderHeight(cell.height)),0)*.22,0); updateCamera();
 }
 
 function panCamera(dx,dy) {
@@ -217,7 +217,7 @@ function restoreMap(next) {
 function updateSelection() {
   const fields=['cell-x','cell-z','cell-height','cell-color','cell-impassable'];
   if(!selected){selectionMesh.visible=false;fields.forEach((id)=>$(id).textContent='—');$('cell-editor').hidden=true;return;}
-  const root=cellMeshes[selected.z*map.width+selected.x],height=Math.max(selected.height,.06); selectionMesh.visible=true; selectionMesh.position.copy(root.position); selectionMesh.position.y=height/2; selectionMesh.scale.set(1,height,1);
+  const root=cellMeshes[selected.z*map.width+selected.x],height=renderHeight(selected.height); selectionMesh.visible=true; selectionMesh.position.copy(root.position); selectionMesh.position.y=height/2; selectionMesh.scale.set(1,height,1);
   $('cell-x').textContent=selected.x;$('cell-z').textContent=selected.z;$('cell-height').textContent=selected.height.toFixed(1);$('cell-color').textContent=selected.color;$('cell-impassable').textContent=selected.impassable?'ON':'OFF';
   $('cell-editor').hidden=false;$('selected-height').value=selected.height.toFixed(1);$('selected-color').value=selected.color;$('selected-impassable').checked=selected.impassable;$('selected-memo').value=selected.memo;
 }
