@@ -1,4 +1,4 @@
-# QA結果 v0.1.3
+# QA結果 v0.1.4
 
 ## 自動テスト
 
@@ -51,6 +51,7 @@
 - Gameplay HeightとVisual Yを分離し、RenderHeight = GameplayHeight × 0.6：PASS
 - H3/H5の描画差1.2、H3.5/H7の描画差2.1の換算テスト：PASS
 - JSONのHeight値、編集量、Undo/Redo、Import/Export、保存データ：変更なし
+- Service Workerキャッシュ番号を更新し、既存PWAへ新しい描画コードを配信：PASS
 
 ## iPhone実機で確認が必要
 
