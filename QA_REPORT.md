@@ -1,4 +1,4 @@
-# QA結果 v0.1.4
+# QA結果 v0.1.5
 
 ## 自動テスト
 
@@ -48,8 +48,8 @@
 - 390×844で初期盤面の左右端が切れずに収まること：PASS
 - 390×844でセル編集と戻る：PASS
 - 2本指Pan／ピンチの実入力はComputer Use環境で再現できず、実機確認へ継続
-- Gameplay HeightとVisual Yを分離し、RenderHeight = GameplayHeight × 0.6：PASS
-- H3/H5の描画差1.2、H3.5/H7の描画差2.1の換算テスト：PASS
+- Gameplay HeightとVisual Yを分離し、RenderHeight = GameplayHeight × 0.4：PASS
+- H3/H5の描画差0.8、H3.5/H7の描画差1.4の換算テスト：PASS
 - JSONのHeight値、編集量、Undo/Redo、Import/Export、保存データ：変更なし
 - Service Workerキャッシュ番号を更新し、既存PWAへ新しい描画コードを配信：PASS
 

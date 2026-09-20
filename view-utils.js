@@ -1,4 +1,4 @@
-export const RENDER_HEIGHT_SCALE = 0.6;
+export const RENDER_HEIGHT_SCALE = 0.4;
 
 export function renderHeight(gameplayHeight) {
   return Math.round(Number(gameplayHeight) * RENDER_HEIGHT_SCALE * 1000) / 1000;

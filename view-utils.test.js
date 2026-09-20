@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { heightLabelText, panTargetDelta, renderHeight } from './view-utils.js';
 
 test('Gameplay Height is kept separate from the visual render height', () => {
-  assert.deepEqual([0, .5, 1, 1.5, 2, 3, 5, 7].map(renderHeight), [0, .3, .6, .9, 1.2, 1.8, 3, 4.2]);
+  assert.deepEqual([0, .5, 1, 1.5, 2, 3, 5, 7].map(renderHeight), [0, .2, .4, .6, .8, 1.2, 2, 2.8]);
 });
 
 test('Height numbers omit unnecessary decimal places', () => {
